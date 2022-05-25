@@ -71,7 +71,13 @@ E3 -> E8  Even Parity
 E2 -> E7  Disable Parity - 2 Stop Bits
 E1 -> E6  From 9600 to 1200 baud
 ```
-  
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=xELaOZ6K31M" target="_blank">
+ <img src="http://img.youtube.com/vi/xELaOZ6K31M/mqdefault.jpg" alt="Watch the video" width="300" border="10" />
+</a>
+
+Video of the self-test program.
+
 ## Character set <div name="Characters"/>
 The display is using ASCII and has has a few alternate character sets which can be selected as shown in the datasheet.
 
