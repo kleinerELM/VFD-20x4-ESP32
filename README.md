@@ -2,7 +2,7 @@
 
 The display stems from an old Thermo Finnigan Mass Spectrometer (TSQ/SSQ 7000) my university wanted to dispose, so I rescued this cool display.
 <div style="width:300px">
-![TSQ/SSQ 7000](/images/GC-MS.jpg?raw=true)
+![TSQ/SSQ 7000](/images/GC-MS.jpg)
 <div>
 
 
@@ -13,7 +13,7 @@ Manufacturer IEE
 Due to an old version of the manufacturers website the interface is serial and software dimming is available.
 Input voltage 5 V (12 Watt) -> 2.4 A
 <div style="width:300px">
-![03601-34-080 FLIP VFD Front](/images/Display.jpg?raw=true)
+![03601-34-080 FLIP VFD Front](/images/Display.jpg)
 <div>
 
 ### Datasheets
@@ -23,11 +23,11 @@ I found no datasheet for exactly this device, however I found some info around t
 
 ### Pinout & Jumper
 <div style="width:300px">
-[03601-34-080 FLIP VFD Front](/images/Display.jpg?raw=true)
+![03601-34-080 FLIP VFD Front](/images/Display.jpg)
 <div>
 
 #### RS-232 - 25 pin connector
-[x] - connections present in the GC-MS\
+[x] - connections present in the GC-MS
 ```
 1  - [ ] Chassis GND\
 2  - [x] TX (RS-232C)           
@@ -54,7 +54,7 @@ Power cable had 3 connected pins in the original device
 6  - RESET (Pull low to reset)
 ```
 Al other pins are not connected!
-\
+
 #### Jumper settings 
 The settings were extrapolated from a datasheet of a S03601-30-040R display
 ```
@@ -70,5 +70,5 @@ The display is using ASCII and has has a few alternate character sets which can 
 
 
 <div style="width:300px">
-[Closeup & Self-Test](/images/Testmode.jpg?raw=true)
+![Closeup & Self-Test](/images/Testmode.jpg)
 <div>
