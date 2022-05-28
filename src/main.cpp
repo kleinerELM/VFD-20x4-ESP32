@@ -35,6 +35,7 @@
 #define DHTPIN 4     // what digital pin the DHT22 is conected to
 DHT_Unified dht(DHTPIN, DHT22);
 
+#define LIGHT_SENSOR_PIN 33
 
 float h = 0;
 float t = 0;
@@ -74,8 +75,8 @@ static const char* host = HOSTIDENTIFY "-webupdate";
 // ESP8266WebServer instance will be shared both AutoConnect and UpdateServer.
 WebServerClass  httpServer(HTTP_PORT);
 
-#define USERNAME "Florian"   //*< Replace the actual username you want */
-#define PASSWORD "fckgwrhqq2"   //*< Replace the actual password you want */
+#define USERNAME "Florian"           //*< Replace the actual username you want */
+#define PASSWORD "legitupdatepass"   //*< Replace the actual password you want */
 // Declare AutoConnectAux to bind the HTTPWebUpdateServer via /update url
 // and call it from the menu.
 // The custom web page is an empty page that does not contain AutoConnectElements.
@@ -169,19 +170,37 @@ void vfd_brightness( int value ) {
   Serial2.write(0x19);
   if ( value == 1 ) {
     Serial2.write(0x4D);
-  } else if ( value == 2 ) {
+  } else if ( value == 2 ) { // uneffctive for 03601-34-080
     Serial2.write(0x4E);
-  } else if ( value == 3 ) {
+  } else if ( value == 3 ) { // uneffctive for 03601-34-080
     Serial2.write(0x4F);
   } else {
     Serial2.write(0x4C);
   }
 }
 
+void auto_brightness() {
+  int analogValue = analogRead(LIGHT_SENSOR_PIN);
+  int brightnesslevel = 0;
+  if (analogValue < 40) {          // very dark
+    brightnesslevel = 0;
+  } else if (analogValue < 1500) {  // dark
+    brightnesslevel = 0;//1;
+  } else if (analogValue < 3000) { // bright
+    brightnesslevel = 2;//2;
+  } else {                         // very bright
+    brightnesslevel = 2;//3;
+  }
+  Serial.println( "Brightness "+ String(analogValue) + "/4096, resulting vfd brightness level: " + String( brightnesslevel + 1 ) + "/2"  );
+  vfd_brightness( brightnesslevel );
+
+}
+
+// print the text centered without a line break
 int vfd_print( String text ) {
   text.replace('Ä', '[');
   text.replace('Ö', '\\');
-  text.replace('Ä', ']');
+  text.replace('Ü', ']');
   text.replace('°', '~');
 
   int len = text.length();
@@ -205,6 +224,7 @@ int vfd_print( String text ) {
   return len;
 }
 
+// print the text centered with a line break
 void vfd_println( String text ) {
   int len = vfd_print( text );
   vfd_new_line();
@@ -266,7 +286,6 @@ void setup() {
     else
       Serial.println("Error setting up MDNS responder");
   }
-
   // VFD serial connection
   // at pin 16 and pin 17
   // there were noise issues using 9600 baud
@@ -281,8 +300,8 @@ void loop() {
     read_dht();
     last_read = millis();
   }
-
-  vfd_brightness(3);
+  auto_brightness();
+  // vfd_brightness(3);
   vfd_cursor_hide();
   vfd_cr_lf_off();
 
@@ -291,21 +310,15 @@ void loop() {
 
   vfd_println("Willkommen am");
   vfd_println("F.A. Finger-Institut");
-  vfd_println("im FIB/REM-Labor");
+  vfd_println("f]r Baustoffkunde");
   vfd_println("an der");
   vfd_println("Bauhaus-Universit[t");
-  vfd_print  ("Weimar");
+  vfd_println("Weimar im");
+  vfd_println("XRF&REM/FIB-Labor");
   vfd_new_line();
 
-  delay(1000);
-  // vfd_cls();
-
-  //vfd_new_line();
   snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
-  vfd_print(String(dht_string));
-  //Serial2.print("°^<>|,;.:-_'");
-  //vfd_new_line();
-  //Serial2.print("+*~`!§$%&/()=?");
+  vfd_println(String(dht_string));
 
   delay(5000);
   vfd_cls();

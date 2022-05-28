@@ -103,3 +103,5 @@ The display is using ASCII and has has a few alternate character sets which can 
 ## Notes <div name="notes" />
 
 Due to bad signaling reasons it was necessary to reduce the baud rate to 1200 between the display and the microcontroller.
+
+The display is dimmable, but only in two steps. However, the documentation mentions 4 dimming steps.
