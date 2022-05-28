@@ -30,9 +30,39 @@
 #define VFD_W 20
 #define VFD_H 4
 
-#define DHTREADINTERVAL 5
+#define DHTREADINTERVAL 1*60*1000 // in min
+#define MIN
 #define DHTPIN 4     // what digital pin the DHT22 is conected to
 DHT_Unified dht(DHTPIN, DHT22);
+
+
+float h = 0;
+float t = 0;
+void read_dht() {
+    Serial.print("reading DHT22 at Pin " + String(DHTPIN) + ": ");
+
+    // Get humidity event and print its value.
+    sensors_event_t event;
+    dht.humidity().getEvent(&event);
+    if (isnan(event.relative_humidity)) {
+      Serial.println(F("Error reading humidity!"));
+    } else {
+      h = event.relative_humidity;
+      Serial.print(F("Humidity: "));
+      Serial.print(h);
+      Serial.println(F("%"));
+    }
+
+    dht.temperature().getEvent(&event);
+    if (isnan(event.temperature)) {
+      Serial.println(F("Error reading temperature!"));
+    } else {
+      t = event.temperature;
+      Serial.print(F("Temperature: "));
+      Serial.print(t);
+      Serial.println(F("°C"));
+    }
+}
 
 //MQTT
 #define MQTT_DEVICE "Vacuum-fluorescent-display"
@@ -117,6 +147,8 @@ void vfd_reset() {
   delay(1200);
 }
 
+void vfd_cls() { Serial2.write(0x15); }
+
 // select specific character sets (eng is standard)
 //                   23 5B 5C 5D 5F 60
 // scientific        #  =  ∑  µ  Ω  Δ
@@ -130,7 +162,9 @@ void vfd_charset_sca() { Serial2.write(0x1E); }
 // german            £  Ä  Ö  Ü  _  `
 void vfd_charset_ger() { Serial2.write(0x1F); }
 
-
+// the manual described 4 brightness states. However only 2 seem to work:
+// 0, 1, 2 dim
+// 3 bright
 void vfd_brightness( int value ) {
   Serial2.write(0x19);
   if ( value == 1 ) {
@@ -144,6 +178,39 @@ void vfd_brightness( int value ) {
   }
 }
 
+int vfd_print( String text ) {
+  text.replace('Ä', '[');
+  text.replace('Ö', '\\');
+  text.replace('Ä', ']');
+  text.replace('°', '~');
+
+  int len = text.length();
+  int i = 0;
+  if (len < VFD_W-1) {
+    for (i=0;i<floor( (VFD_W - len) / 2 );i++) {
+      Serial2.print(' ');
+    }
+  }
+
+  for (int j=0;j<len;j++) {
+    Serial2.print(text[j]);
+    delay(100);
+  }
+
+  if (len < VFD_W ) {
+    for (int k=0;k<(VFD_W-len-i);k++) {
+      Serial2.print(' ');
+    }
+  }
+  return len;
+}
+
+void vfd_println( String text ) {
+  int len = vfd_print( text );
+  vfd_new_line();
+}
+
+int last_read = millis();
 void setup() {
   delay(1000);
   // debug-serial-connection
@@ -178,6 +245,7 @@ void setup() {
   Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F(" %"));
   Serial.println(F("------------------------------------"));
   Serial.println();
+  read_dht();
 
   // Prepare the ESP8266HTTPUpdateServer
   // The /update handler will be registered during this function.
@@ -201,85 +269,44 @@ void setup() {
 
   // VFD serial connection
   // at pin 16 and pin 17
-  Serial2.begin(9600 , SERIAL_7N2, 16,17);
+  // there were noise issues using 9600 baud
+  Serial2.begin(1200 , SERIAL_7O1, 16,17);
+  vfd_cls();
+}
 
-  vfd_cursor_hide();
-  Serial2.print("Dummytext");
+
+char dht_string[21];
+void loop() {
+  if ( DHTREADINTERVAL < millis() - last_read ) {
+    read_dht();
+    last_read = millis();
+  }
+
+  vfd_brightness(3);
   vfd_cursor_hide();
   vfd_cr_lf_off();
-  // put your setup code here, to run once:
-}
-//strcpy(msgTweet, "This is 26 characters long")
-int vfd_print( char text[] ) {
 
-  int len = strlen(text);
-  for (int i=0;i<len;i++) {
-    if (text[i] == 'Ä') {
-      Serial2.print('[');
-    } else if (text[i] == 'Ö') {
-      Serial2.print('\\');
-    } else if (text[i] == 'Ü') {
-      Serial2.print(']');
-    } else {
-      Serial2.print(text[i]);
-    }
-    //Serial2.print(text[i]);
-    Serial.print(text[i]);
-    //delay(250);
-  }
-  if (len < VFD_W ) {
-    for (int i=0;i<(VFD_W-len);i++) {
-      Serial2.print(' ');
-    }
-  }
-  Serial.println();
-  return len;
-}
-
-void vfd_println( char text[] ) {
-  int len = vfd_print( text );
-  vfd_new_line();
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  //Serial.print("F.A. Finger-Institut");
-  //
-  // vfd_charset_ger();
+  vfd_charset_ger();
   vfd_cursor_home();
-  vfd_brightness(2);
-  vfd_println("   Willkommen am");
-  vfd_println("F.A. Finger-Institut");
-  vfd_println(" Bauhaus-Uni Weimar ");
-  vfd_print  ("   FIB/REM-Labor ");
-  //vfd_charset_eng();
-}
 
-/* Baud-rates available: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200, 256000, 512000, 962100
- *
- *  Protocols available:
- * SERIAL_5N1   5-bit No parity 1 stop bit
- * SERIAL_6N1   6-bit No parity 1 stop bit
- * SERIAL_7N1   7-bit No parity 1 stop bit
- * SERIAL_8N1 (the default) 8-bit No parity 1 stop bit
- * SERIAL_5N2   5-bit No parity 2 stop bits
- * SERIAL_6N2   6-bit No parity 2 stop bits
- * SERIAL_7N2   7-bit No parity 2 stop bits
- * SERIAL_8N2   8-bit No parity 2 stop bits
- * SERIAL_5E1   5-bit Even parity 1 stop bit
- * SERIAL_6E1   6-bit Even parity 1 stop bit
- * SERIAL_7E1   7-bit Even parity 1 stop bit
- * SERIAL_8E1   8-bit Even parity 1 stop bit
- * SERIAL_5E2   5-bit Even parity 2 stop bit
- * SERIAL_6E2   6-bit Even parity 2 stop bit
- * SERIAL_7E2   7-bit Even parity 2 stop bit
- * SERIAL_8E2   8-bit Even parity 2 stop bit
- * SERIAL_5O1   5-bit Odd  parity 1 stop bit
- * SERIAL_6O1   6-bit Odd  parity 1 stop bit
- * SERIAL_7O1   7-bit Odd  parity 1 stop bit
- * SERIAL_8O1   8-bit Odd  parity 1 stop bit
- * SERIAL_5O2   5-bit Odd  parity 2 stop bit
- * SERIAL_6O2   6-bit Odd  parity 2 stop bit
- * SERIAL_7O2   7-bit Odd  parity 2 stop bit
- * SERIAL_8O2   8-bit Odd  parity 2 stop bit
-*/
+  vfd_println("Willkommen am");
+  vfd_println("F.A. Finger-Institut");
+  vfd_println("im FIB/REM-Labor");
+  vfd_println("an der");
+  vfd_println("Bauhaus-Universit[t");
+  vfd_print  ("Weimar");
+  vfd_new_line();
+
+  delay(1000);
+  // vfd_cls();
+
+  //vfd_new_line();
+  snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
+  vfd_print(String(dht_string));
+  //Serial2.print("°^<>|,;.:-_'");
+  //vfd_new_line();
+  //Serial2.print("+*~`!§$%&/()=?");
+
+  delay(5000);
+  vfd_cls();
+}

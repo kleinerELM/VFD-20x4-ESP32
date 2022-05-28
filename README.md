@@ -14,7 +14,10 @@ The display stems from an old Thermo Finnigan Mass Spectrometer (TSQ/SSQ 7000) m
         2. [power connector - 6 pin connector](#6pin)
         3. [Jumper settings](#Jumper)
     3. [Character set](#Characters)
-3. [ESP-32 Code & requirements](#ESP32)
+4. [Microcontroller and connection](#ESP32)
+    1. [Hardware used](#hardware)
+    2. [Connection](#connection)
+    3. [Notes](#notes)
 
 # Display <div name="Display" />
 Type: **03601-34-080 FLIP VFD**\
@@ -39,7 +42,7 @@ According to the datasheet of other serial VFDs of the same manufacturer and of 
 [x] - connections present in the GC-MS
 ```
 1  - [ ] Chassis GND\
-2  - [x] TX (RS-232C)           
+2  - [x] TX (RS-232C)
 3  - [x] RX (RS-232C)
 5  - [ ] Clear to Send (RS-232C)
 7  - [x] Signal GND
@@ -83,6 +86,20 @@ The display is using ASCII and has has a few alternate character sets which can 
 
 <img src="images/Testmode.jpg" width="300" alt="Closeup & Self-Test"/>
 
-# ESP-32 Code & requirements <div name="ESP32" />
-  
-TODO
+# Microcontroller and connection <div name="ESP32" />
+
+## Hardware used <div name="hardware" />
+
+ - ESP32 nodemcu (AZDelivery)
+ - MAX3232 based RS232-TTL adapter
+ - DHT22
+
+## Connection <div name="connection" />
+
+ - PIN  4 -> DHT22 data pin
+ - PIN 16 -> RX MAX3232
+ - PIN 17 -> TX MAX3232
+
+## Notes <div name="notes" />
+
+Due to bad signaling reasons it was necessary to reduce the baud rate to 1200 between the display and the microcontroller.
