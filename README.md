@@ -93,15 +93,20 @@ The display is using ASCII and has has a few alternate character sets which can 
  - ESP32 nodemcu (AZDelivery)
  - MAX3232 based RS232-TTL adapter
  - DHT22
+ - light-sensor
+ - RTC DS1307 (needs 5V supply)
 
 ## Connection <div name="connection" />
 
- - PIN  4 -> DHT22 data pin
- - PIN 16 -> RX MAX3232
- - PIN 17 -> TX MAX3232
+ - Pin  4 -> DHT22 data pin
+ - Pin 16 -> RX MAX3232
+ - Pin 17 -> TX MAX3232
+ - Pin 33 -> Light sensor
+ - Pin 21 -> SDA
+ - Pin 22 -> SCL
 
-## Notes <div name="notes" />
+## Notes to myself <div name="notes" />
 
-Due to bad signaling reasons it was necessary to reduce the baud rate to 1200 between the display and the microcontroller.
-
-The display is dimmable, but only in two steps. However, the documentation mentions 4 dimming steps.
+ - Due to bad signaling reasons it was necessary to reduce the baud rate to 1200 between the display and the microcontroller.
+ - The display is dimmable, but only in two steps. However, the documentation mentions 4 dimming steps.
+ - Disconnect 5V supply from ESP32 before programming
