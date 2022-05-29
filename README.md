@@ -98,12 +98,12 @@ The display is using ASCII and has has a few alternate character sets which can 
 
 ## Connection <div name="connection" />
 
- - Pin  4 -> DHT22 data pin
- - Pin 16 -> RX MAX3232
- - Pin 17 -> TX MAX3232
+ - Pin 04 -> DHT22 data pin
+ - Pin 16 -> RX (MAX3232)
+ - Pin 17 -> TX (MAX3232)
  - Pin 33 -> Light sensor
- - Pin 21 -> SDA
- - Pin 22 -> SCL
+ - Pin 21 -> SDA (RTC)
+ - Pin 22 -> SCL (RTC)
 
 ## Notes to myself <div name="notes" />
 
