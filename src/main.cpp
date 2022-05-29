@@ -1,4 +1,10 @@
+// written by Florian Kleiner 2022
+// https://github.com/kleinerELM/VFD-20x4-ESP32
+
 #include <Arduino.h>
+#include <Wire.h>
+//#include <NTPClient.h>
+#include <RtcDS1307.h>
 
 #if defined(ARDUINO_ARCH_ESP8266)
   #include <ESP8266WiFi.h>
@@ -29,6 +35,8 @@
 
 #define VFD_W 20
 #define VFD_H 4
+
+RtcDS1307<TwoWire> Rtc(Wire);
 
 #define DHTREADINTERVAL 1*60*1000 // in min
 #define MIN
@@ -65,8 +73,33 @@ void read_dht() {
     }
 }
 
-//MQTT
-#define MQTT_DEVICE "Vacuum-fluorescent-display"
+void init_dht() {
+  Serial.println("-Init DHT22-");
+  Serial.println("reading DHT-value every " + String(DHTREADINTERVAL) + " min");
+  Serial.println();
+
+  dht.begin();
+  // Print temperature sensor details.
+  sensor_t sensor;
+  dht.temperature().getSensor(&sensor);
+  Serial.println(F("------------------------------------"));
+  Serial.println(F("Temperature Sensor"));
+  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
+  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value);  Serial.println(F("°C"));
+  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value);  Serial.println(F("°C"));
+  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C"));
+  Serial.println(F("------------------------------------"));
+  // Print humidity sensor details.
+  dht.humidity().getSensor(&sensor);
+  Serial.println(F("Humidity Sensor"));
+  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
+  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value);  Serial.println(F(" %"));
+  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value);  Serial.println(F(" %"));
+  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F(" %"));
+  Serial.println(F("------------------------------------"));
+  Serial.println();
+  read_dht();
+}
 
 // Fix hostname for mDNS. It is a requirement for the lightweight update feature.
 static const char* host = HOSTIDENTIFY "-webupdate";
@@ -184,16 +217,15 @@ void auto_brightness() {
   int brightnesslevel = 0;
   if (analogValue < 40) {          // very dark
     brightnesslevel = 0;
-  } else if (analogValue < 1500) {  // dark
+  } else if (analogValue < 1500) { // dark
     brightnesslevel = 0;//1;
   } else if (analogValue < 3000) { // bright
-    brightnesslevel = 2;//2;
+    brightnesslevel = 3;//2;
   } else {                         // very bright
-    brightnesslevel = 2;//3;
+    brightnesslevel = 3;//3;
   }
-  Serial.println( "Brightness "+ String(analogValue) + "/4096, resulting vfd brightness level: " + String( brightnesslevel + 1 ) + "/2"  );
+  Serial.println( "Brightness "+ String(analogValue) + "/4096, resulting vfd brightness level: " + String( brightnesslevel ) + "/2"  );
   vfd_brightness( brightnesslevel );
-
 }
 
 // print the text centered without a line break
@@ -230,6 +262,88 @@ void vfd_println( String text ) {
   vfd_new_line();
 }
 
+#define countof(a) (sizeof(a) / sizeof(a[0]))
+void vfd_date(const RtcDateTime& dt)
+{
+    char datestring[20];
+
+    snprintf_P(datestring,
+            countof(datestring),
+            PSTR("%02u.%02u.%04u"),
+            dt.Day(),
+            dt.Month(),
+            dt.Year() );
+
+    Serial.print(datestring);
+    vfd_println(datestring);
+}
+
+void printDateTime(const RtcDateTime& dt)
+{
+    char datestring[20];
+
+    snprintf_P(datestring,
+            countof(datestring),
+            PSTR("%02u.%02u.%04u %02u:%02u:%02u"),
+            dt.Day(),
+            dt.Month(),
+            dt.Year(),
+            dt.Hour(),
+            dt.Minute(),
+            dt.Second() );
+    Serial.print(datestring);
+}
+
+RtcDateTime get_current_time() {
+  if (!Rtc.IsDateTimeValid()) {
+    if (Rtc.LastError() != 0) {
+      // we have a communications error
+      // see https://www.arduino.cc/en/Reference/WireEndTransmission for
+      // what the number means
+      Serial.print("RTC communications error = ");
+      Serial.println(Rtc.LastError());
+    } else {
+      // Common Causes:
+      //    1) the battery on the device is low or even missing and the power line was disconnected
+      Serial.println("RTC lost confidence in the DateTime!");
+    }
+  }
+
+  return Rtc.GetDateTime();
+}
+
+RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+const char data[] = "what time is it";
+void init_rtc_time() {
+  Serial.println("-Init RTC-");
+  Rtc.Begin();
+
+  if (!Rtc.GetIsRunning()) {
+      Serial.println("RTC was not actively running, starting now");
+      Rtc.SetIsRunning(true);
+  }
+
+  RtcDateTime now = get_current_time();
+  if (now < compiled) {
+      Serial.println("RTC is older than compile time!  (Updating DateTime)");
+      Rtc.SetDateTime(compiled);
+  }
+
+  // never assume the Rtc was last configured by you, so
+  // just clear them to your needed state
+  Rtc.SetSquareWavePin(DS1307SquareWaveOut_Low);
+
+  /* comment out on a second run to see that the info is stored long term */
+  // Store something in memory on the RTC
+  Rtc.SetMemory(0, 13);
+  uint8_t written = Rtc.SetMemory(13, (const uint8_t*)data, sizeof(data) - 1); // remove the null terminator strings add
+  Rtc.SetMemory(1, written);
+  /* end of comment out section */
+
+  Serial.println();
+}
+
+
 int last_read = millis();
 void setup() {
   delay(1000);
@@ -238,34 +352,11 @@ void setup() {
 
   Serial.println();
   Serial.println();
-  Serial.println("---Humidity sensor (" + String(MQTT_DEVICE) + ")---");
+  Serial.println("---VFD Display + DHT22 + RTC---");
   Serial.println("last build: " __DATE__ ", " __TIME__);
   Serial.println();
-  Serial.println("-Settings-");
-  Serial.println("reading DHT-value every " + String(DHTREADINTERVAL) + " min");
-  Serial.println();
 
-  dht.begin();
-  // Print temperature sensor details.
-  sensor_t sensor;
-  dht.temperature().getSensor(&sensor);
-  Serial.println(F("------------------------------------"));
-  Serial.println(F("Temperature Sensor"));
-  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
-  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value);  Serial.println(F("°C"));
-  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value);  Serial.println(F("°C"));
-  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C"));
-  Serial.println(F("------------------------------------"));
-  // Print humidity sensor details.
-  dht.humidity().getSensor(&sensor);
-  Serial.println(F("Humidity Sensor"));
-  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
-  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value);  Serial.println(F(" %"));
-  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value);  Serial.println(F(" %"));
-  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F(" %"));
-  Serial.println(F("------------------------------------"));
-  Serial.println();
-  read_dht();
+  init_dht();
 
   // Prepare the ESP8266HTTPUpdateServer
   // The /update handler will be registered during this function.
@@ -286,10 +377,18 @@ void setup() {
     else
       Serial.println("Error setting up MDNS responder");
   }
+
+  init_rtc_time();
   // VFD serial connection
   // at pin 16 and pin 17
   // there were noise issues using 9600 baud
   Serial2.begin(1200 , SERIAL_7O1, 16,17);
+  vfd_cls();
+  vfd_println("build date");
+  vfd_date( compiled );
+  vfd_new_line();
+  vfd_print("by Florian Kleiner");
+  delay(1000);
   vfd_cls();
 }
 
@@ -317,8 +416,12 @@ void loop() {
   vfd_println("XRF&REM/FIB-Labor");
   vfd_new_line();
 
+  RtcDateTime now = get_current_time();
+  vfd_date( now );
   snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
-  vfd_println(String(dht_string));
+  vfd_print(String(dht_string));
+
+
 
   delay(5000);
   vfd_cls();
