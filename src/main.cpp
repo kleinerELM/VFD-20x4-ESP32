@@ -263,20 +263,6 @@ void vfd_println( String text ) {
 }
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
-void vfd_date(const RtcDateTime& dt)
-{
-    char datestring[20];
-
-    snprintf_P(datestring,
-            countof(datestring),
-            PSTR("%02u.%02u.%04u"),
-            dt.Day(),
-            dt.Month(),
-            dt.Year() );
-
-    Serial.print(datestring);
-    vfd_println(datestring);
-}
 
 void printDateTime(const RtcDateTime& dt)
 {
@@ -292,6 +278,22 @@ void printDateTime(const RtcDateTime& dt)
             dt.Minute(),
             dt.Second() );
     Serial.print(datestring);
+}
+
+void vfd_date(const RtcDateTime& dt)
+{
+    printDateTime(dt);
+
+    char datestring[20];
+
+    snprintf_P(datestring,
+            countof(datestring),
+            PSTR("%02u.%02u.%04u"),
+            dt.Day(),
+            dt.Month(),
+            dt.Year() );
+
+    vfd_println(datestring);
 }
 
 RtcDateTime get_current_time() {
@@ -358,6 +360,21 @@ void setup() {
 
   init_dht();
 
+  init_rtc_time();
+  Serial.println();
+  // VFD serial connection
+  // at pin 16 and pin 17
+  // there were noise issues using 9600 baud
+  Serial2.begin(1200 , SERIAL_7O1, 16,17);
+  vfd_cls();
+  vfd_println("build date");
+  vfd_date( compiled );
+  //vfd_new_line();
+  vfd_print("by Florian Kleiner");
+
+
+  Serial.println("-WiFi-");
+
   // Prepare the ESP8266HTTPUpdateServer
   // The /update handler will be registered during this function.
   httpUpdater.setup(&httpServer, USERNAME, PASSWORD);
@@ -365,9 +382,8 @@ void setup() {
   // Load a custom web page for a sketch and a dummy page for the updater.
   hello.load(AUX_AppPage);
   portal.join({ hello, update });
-
-  Serial.println("-WiFi-");
-  if (portal.begin()) {
+  //if (portal.begin()) { // code stops if not able to connect to wifi... this sucks!
+    Serial.println("1");
     if (MDNS.begin(host)) {
         MDNS.addService("http", "tcp", HTTP_PORT);
         Serial.println(" WiFi connected!");
@@ -376,25 +392,19 @@ void setup() {
     }
     else
       Serial.println("Error setting up MDNS responder");
-  }
+  //}
 
-  init_rtc_time();
-  // VFD serial connection
-  // at pin 16 and pin 17
-  // there were noise issues using 9600 baud
-  Serial2.begin(1200 , SERIAL_7O1, 16,17);
-  vfd_cls();
-  vfd_println("build date");
-  vfd_date( compiled );
-  vfd_new_line();
-  vfd_print("by Florian Kleiner");
-  delay(1000);
-  vfd_cls();
+  Serial.println();
+  Serial.println("-- Setup done --");
+  Serial.println();
+
+  delay(2000);
 }
 
 
 char dht_string[21];
 void loop() {
+  vfd_cls();
   if ( DHTREADINTERVAL < millis() - last_read ) {
     read_dht();
     last_read = millis();
@@ -420,9 +430,7 @@ void loop() {
   vfd_date( now );
   snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
   vfd_print(String(dht_string));
-
-
-
+  Serial.println();
+  Serial.println("---loop done---");
   delay(5000);
-  vfd_cls();
 }
