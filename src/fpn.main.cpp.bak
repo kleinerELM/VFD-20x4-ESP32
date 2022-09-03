@@ -340,8 +340,9 @@ void init_rtc_time() {
       Rtc.SetIsRunning(true);
   }
 
+  // check if the time is plausible
   RtcDateTime now = get_current_time();
-  if (now < compiled) {
+  if ( now < compiled || now.Year() > 2030 ) {
       Serial.println("RTC is older than compile time!  (Updating DateTime)");
       Rtc.SetDateTime(compiled);
   }
@@ -384,6 +385,7 @@ void setup() {
   vfd_cls();
   vfd_println("build date");
   vfd_date( compiled );
+  vfd_println("");
   //vfd_new_line();
   vfd_print("by Florian Kleiner");
 
@@ -416,54 +418,35 @@ void setup() {
   delay(2000);
 }
 
-int start_hour  = 7;
-int stop_hour   = 19;
-char dht_string[21];
+
+//char dht_string[21];
 void loop() {
   vfd_cls();
+  if ( DHTREADINTERVAL < millis() - last_read ) {
+    read_dht();
+    last_read = millis();
+  }
+  //auto_brightness();
+  vfd_brightness(3);
+  vfd_cursor_hide();
+  vfd_cr_lf_off();
+
+  vfd_charset_ger();
+  vfd_cursor_home();
+
+  vfd_println("Willkommen zum");
+  vfd_println("Dorffest in Ulla");
+  vfd_println("im Museum Flugplatz");
+  vfd_println("Weimar-Nohra");
+  vfd_println("Ge\\ffnet bis 17 Uhr");
+  //vfd_new_line();
 
   RtcDateTime now = get_current_time();
-  if ( now.Hour() > start_hour && now.Hour() < stop_hour ) {
-    if ( DHTREADINTERVAL < millis() - last_read ) {
-      read_dht();
-      last_read = millis();
-    }
-    auto_brightness();
-    // vfd_brightness(3);
-    vfd_cursor_hide();
-    vfd_cr_lf_off();
-
-    vfd_charset_ger();
-    vfd_cursor_home();
-
-    vfd_println("Willkommen am");
-    vfd_println("F.A. Finger-Institut");
-    vfd_println("f]r Baustoffkunde");
-    vfd_println("an der");
-    vfd_println("Bauhaus-Universit[t");
-    vfd_println("Weimar im");
-    vfd_println("REM/FIB&XRF-Labor");
-    vfd_new_line();
-
-
-    vfd_date( now );
-    vfd_new_line();
-    snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
-    vfd_print(String(dht_string));
-
-    Serial.println();
-    Serial.println("---loop done---");
-    delay(5000);
-  } else {
-    if ( now.Minute() >= 0 && now.Minute() <= 1) {
-      vfd_println( "Energiesparen von" );
-      vfd_println( String( stop_hour ) + " bis " + String( start_hour ) + " Uhr" );
-    } else {
-      Serial.print( "Energiesparen von " );
-      Serial.println( String( stop_hour ) + " bis " + String( start_hour ) + " Uhr" );
-      Serial.println( );
-      Serial.println( String( now.Hour() ) +  ":" + String( now.Minute() ) + " Uhr" );
-      delay(20000);
-    }
-  }
+  //vfd_date( now );
+  vfd_time( now );
+  //snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
+  //vfd_print(String(dht_string));
+  Serial.println();
+  Serial.println("---loop done---");
+  delay(5000);
 }
