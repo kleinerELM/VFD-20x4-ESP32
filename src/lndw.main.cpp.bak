@@ -417,11 +417,11 @@ void setup() {
 }
 
 int start_hour  = 7;
-int stop_hour   = 19;
+int stop_hour   = 24;
 char dht_string[21];
 void loop() {
   vfd_cls();
-    vfd_cursor_hide();
+  vfd_cursor_hide();
 
   RtcDateTime now = get_current_time();
   if ( now.Hour() > start_hour && now.Hour() < stop_hour ) {
@@ -436,20 +436,25 @@ void loop() {
     vfd_charset_ger();
     vfd_cursor_home();
 
-    vfd_println("Willkommen am");
-    vfd_println("F.A. Finger-Institut");
+    vfd_println("Willkommen zur");
+    vfd_println("Langen Nacht der");
+    vfd_println("Wissenschaften am");
+    vfd_print("F.A. Finger-Institut");
+    delay(1000);
+    vfd_new_line();
     vfd_println("f]r Baustoffkunde");
     vfd_println("an der");
     vfd_println("Bauhaus-Universit[t");
-    vfd_println("Weimar im");
-    vfd_println("REM/FIB&XRF-Labor");
+    vfd_println("Weimar");
+    delay(1000);
     vfd_new_line();
 
 
+    vfd_println("REM/FIB&XRF-Labor");
     vfd_date( now );
     vfd_new_line();
     snprintf(dht_string, 21, "%.1f ~C    %.1f %s", t, h, "%-RH");
-    vfd_print(String(dht_string));
+    //vfd_print(String(dht_string));
 
     Serial.println();
     Serial.println("---loop done---");
@@ -458,6 +463,7 @@ void loop() {
     if ( now.Minute() >= 0 && now.Minute() <= 1) {
       vfd_println( "Energiesparen von" );
       vfd_println( String( stop_hour ) + " bis " + String( start_hour ) + " Uhr" );
+      delay(20000);
     } else {
       Serial.print( "Energiesparen von " );
       Serial.println( String( stop_hour ) + " bis " + String( start_hour ) + " Uhr" );
